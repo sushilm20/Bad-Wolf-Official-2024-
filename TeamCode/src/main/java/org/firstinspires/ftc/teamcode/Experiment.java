@@ -7,11 +7,10 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-@TeleOp(name="Experiment TeleOp", group="Linear OpMode")
+@TeleOp(name="Experiment", group="Linear OpMode")
 public class Experiment extends LinearOpMode {
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftFront = null;
-    private boolean grip = true;
     private DcMotor leftBack = null;
     private DcMotor rightFront = null;
     private DcMotor rightBack = null;
@@ -20,6 +19,7 @@ public class Experiment extends LinearOpMode {
     private Servo rightElevatorServo = null;
     private Servo leftElevatorServo = null;
     private Servo masterClaw = null;
+    private Servo clawRotation = null; // New variable for claw rotation
     private boolean masterClawPosition = false;
     private double speedMultiplier = 1.0; // Speed multiplier
 
@@ -38,6 +38,7 @@ public class Experiment extends LinearOpMode {
         rightElevatorServo = hardwareMap.get(Servo.class, "rightElevatorServo");
         leftElevatorServo = hardwareMap.get(Servo.class, "leftElevatorServo");
         masterClaw = hardwareMap.get(Servo.class, "masterClaw");
+        clawRotation = hardwareMap.get(Servo.class, "clawRotation"); // Initialize the claw rotation servo
 
         rightElevator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftElevator.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -53,9 +54,10 @@ public class Experiment extends LinearOpMode {
         rightBack.setDirection(DcMotor.Direction.FORWARD);
 
         // Set initial servo positions
-        rightElevatorServo.setPosition(0.8); // Initial position for right elevator servo
-        leftElevatorServo.setPosition(0.2);  // Initial position for left elevator servo
+        rightElevatorServo.setPosition(1); // Initial position for right elevator servo
+        leftElevatorServo.setPosition(0);  // Initial position for left elevator servo
         masterClaw.setPosition(0.35);         // Initial position for master claw
+        clawRotation.setPosition(0);        // Initial position for claw rotation
 
         telemetry.addData("Status", "Ready To Start");
         telemetry.update();
@@ -89,10 +91,10 @@ public class Experiment extends LinearOpMode {
             int leftElevatorPosition = leftElevator.getCurrentPosition();
 
             if (gamepad1.right_bumper && rightElevatorPosition < 4800 && leftElevatorPosition < 4800) {
-                // Raise elevator
+                // Raise elevator and also tune for new Misumi and new ultra planetary gears.
                 rightElevator.setPower(1.0);
                 leftElevator.setPower(1.0);
-            } else if (gamepad1.left_bumper && rightElevatorPosition > 0 && leftElevatorPosition > 0) {
+            } else if (gamepad1.left_bumper && rightElevatorPosition > 20 && leftElevatorPosition > 20) {
                 // Lower elevator
                 rightElevator.setPower(-0.7);
                 leftElevator.setPower(-0.7);
@@ -116,13 +118,19 @@ public class Experiment extends LinearOpMode {
                 masterClaw.setPosition(0.4);
             }
 
+            // Claw rotation control
+            if (gamepad1.dpad_left || gamepad2.dpad_left) {
+                clawRotation.setPosition(0); // Rotate claw to position 0
+            } else if (gamepad1.dpad_right || gamepad2.dpad_right) {
+                clawRotation.setPosition(1); // Rotate claw to position 1
+            }
+
             // Telemetry data
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Motors", "leftFront (%.2f), rightFront (%.2f)", leftFrontPower, rightFrontPower);
             telemetry.addData("Motors", "leftBack (%.2f), rightBack (%.2f)", leftBackPower, rightBackPower);
             telemetry.addData("Accuracy Mode Speed", speedMultiplier);
-            telemetry.addData("Elevator Position", "Right: %d, Left: %d",
-                    rightElevatorPosition, leftElevatorPosition);
+            telemetry.addData("Elevator Position", "Right: %d, Left: %d", rightElevatorPosition, leftElevatorPosition);
             telemetry.update();
         }
     }
